@@ -17,11 +17,12 @@ import {
   InstanceBatch,
 } from './instanceBatch.js';
 import { ObjectPool, swapRemove } from './pool.js';
+import { Radar } from './radar.js';
 
-const ARENA_HALF_WIDTH = 15.5;
-const ARENA_HALF_HEIGHT = 8.7;
-const BASE_VIEW_WIDTH = 34;
-const BASE_VIEW_HEIGHT = 20;
+const ARENA_HALF_WIDTH = 20;
+const ARENA_HALF_HEIGHT = 12;
+const BASE_VIEW_WIDTH = 24;
+const BASE_VIEW_HEIGHT = 14;
 const PLAYER_RADIUS = 0.48;
 const PLAYER_SPRITE_SIZE = 1.45;
 const DEATH_FPS = 12;
@@ -217,13 +218,15 @@ function createParticleEntity(): ParticleEntity {
 
 export class Game {
   private readonly canvas: HTMLCanvasElement;
+  private readonly radar: Radar;
   private readonly callbacks: GameCallbacks;
   private readonly assets: GameAssets;
   private readonly audio: SoundEngine;
   private readonly scene = new THREE.Scene();
-  private readonly camera = new THREE.OrthographicCamera(-17, 17, 10, -10, 0.1, 100);
+  private readonly camera = new THREE.OrthographicCamera(-12, 12, 7, -7, 0.1, 100);
   private readonly renderer: THREE.WebGLRenderer;
   private readonly viewport = new THREE.Vector2();
+  private readonly cameraFocus = new THREE.Vector2();
   private readonly pointerNdc = new THREE.Vector2();
   private readonly pointerWorld = new THREE.Vector2();
   private readonly scratchMove = new THREE.Vector2();
@@ -265,11 +268,13 @@ export class Game {
 
   constructor(
     canvas: HTMLCanvasElement,
+    radarCanvas: HTMLCanvasElement,
     assets: GameAssets,
     callbacks: GameCallbacks,
     audio: SoundEngine,
   ) {
     this.canvas = canvas;
+    this.radar = new Radar(radarCanvas);
     this.assets = assets;
     this.callbacks = callbacks;
     this.audio = audio;
@@ -307,6 +312,9 @@ export class Game {
     this.pendingLevels = 0;
     this.offeredUpgrades = [];
     this.createPlayer();
+    this.cameraFocus.set(0, 0);
+    this.camera.position.x = 0;
+    this.camera.position.y = 0;
     this.setPhase('running');
     this.emitHud();
   }
@@ -347,6 +355,7 @@ export class Game {
     window.removeEventListener('blur', this.handleBlur);
     this.canvas.removeEventListener('pointermove', this.handlePointerMove);
     this.clearRunObjects();
+    this.radar.dispose();
     for (const batch of Object.values(this.gfx)) {
       this.scene.remove(batch.mesh);
       batch.dispose();
@@ -359,7 +368,7 @@ export class Game {
     groundTexture.needsUpdate = true;
     groundTexture.wrapS = THREE.MirroredRepeatWrapping;
     groundTexture.wrapT = THREE.MirroredRepeatWrapping;
-    groundTexture.repeat.set(8.5, 5.4);
+    groundTexture.repeat.set(11, 7.5);
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(ARENA_HALF_WIDTH * 2 + 4, ARENA_HALF_HEIGHT * 2 + 4),
@@ -421,7 +430,8 @@ export class Game {
     edgeTexture.needsUpdate = true;
     edgeTexture.wrapS = THREE.MirroredRepeatWrapping;
     edgeTexture.wrapT = THREE.ClampToEdgeWrapping;
-    edgeTexture.repeat.set(5.5, 1);
+    const forestWidth = ARENA_HALF_WIDTH * 2 + 11;
+    edgeTexture.repeat.set((forestWidth / 42) * 5.5, 1);
     const edgeMaterial = new THREE.MeshBasicMaterial({
       map: edgeTexture,
       transparent: true,
@@ -430,7 +440,7 @@ export class Game {
       depthWrite: false,
       color: 0xd2dacb,
     });
-    const edgeGeometry = new THREE.PlaneGeometry(42, 4.8);
+    const edgeGeometry = new THREE.PlaneGeometry(forestWidth, 4.8);
     const upperForest = new THREE.Mesh(edgeGeometry, edgeMaterial);
     upperForest.position.set(0, ARENA_HALF_HEIGHT + 2.02, -1.45);
     upperForest.renderOrder = 1;
@@ -444,7 +454,8 @@ export class Game {
     const canopyTexture = edgeTexture.clone();
     canopyTexture.needsUpdate = true;
     // 只取贴图底部参差的一截，前景树冠才有叶缘剪影，否则等于压了块半透明矩形
-    canopyTexture.repeat.set(1.7, 0.26);
+    const canopyWidth = ARENA_HALF_WIDTH * 2 + 9;
+    canopyTexture.repeat.set((canopyWidth / 40) * 1.7, 0.26);
     const canopyMaterial = new THREE.MeshBasicMaterial({
       map: canopyTexture,
       transparent: true,
@@ -453,7 +464,7 @@ export class Game {
       depthWrite: false,
       color: 0x74886f,
     });
-    const canopyGeometry = new THREE.PlaneGeometry(40, 3.8);
+    const canopyGeometry = new THREE.PlaneGeometry(canopyWidth, 3.8);
     const upperCanopy = new THREE.Mesh(canopyGeometry, canopyMaterial);
     upperCanopy.position.set(0, ARENA_HALF_HEIGHT + 0.42, 0.18);
     upperCanopy.renderOrder = 7;
@@ -465,17 +476,18 @@ export class Game {
     this.addParallaxLayer(lowerCanopy, 0.95, 0.68, 0.14, 0.07, 0.72, 2.1);
 
     const mistTexture = this.assets.forest.mist;
+    const mistWidth = ARENA_HALF_WIDTH * 2 + 7;
     const mistLayout = [
-      { y: -5.8, opacity: 0.16, scale: 1.12, speed: 0.18, phase: 0.4 },
-      { y: 0.2, opacity: 0.13, scale: 0.92, speed: 0.14, phase: 2.3 },
-      { y: 5.7, opacity: 0.12, scale: 1.05, speed: 0.2, phase: 4.1 },
+      { y: -ARENA_HALF_HEIGHT * 0.67, opacity: 0.16, scale: 1.12, speed: 0.18, phase: 0.4 },
+      { y: ARENA_HALF_HEIGHT * 0.02, opacity: 0.13, scale: 0.92, speed: 0.14, phase: 2.3 },
+      { y: ARENA_HALF_HEIGHT * 0.66, opacity: 0.12, scale: 1.05, speed: 0.2, phase: 4.1 },
     ];
     mistLayout.forEach((layout, index) => {
       const texture = mistTexture.clone();
       texture.needsUpdate = true;
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.repeat.set(2.2 + index * 0.35, 1);
+      texture.repeat.set((mistWidth / 38) * (2.2 + index * 0.35), 1);
       const material = new THREE.MeshBasicMaterial({
         map: texture,
         color: 0x718575,
@@ -483,7 +495,7 @@ export class Game {
         opacity: layout.opacity,
         depthWrite: false,
       });
-      const mist = new THREE.Mesh(new THREE.PlaneGeometry(38, 4.8), material);
+      const mist = new THREE.Mesh(new THREE.PlaneGeometry(mistWidth, 4.8), material);
       mist.position.set(0, layout.y, -0.48 + index * 0.14);
       mist.scale.x = layout.scale;
       mist.renderOrder = 6;
@@ -500,7 +512,7 @@ export class Game {
     });
 
     const groundGrass: FoliagePlacement[][] = this.assets.forest.grass.map(() => []);
-    for (let index = 0; index < 260; index += 1) {
+    for (let index = 0; index < 340; index += 1) {
       const x = randomRange(random, -ARENA_HALF_WIDTH - 0.6, ARENA_HALF_WIDTH + 0.6);
       const y = randomRange(random, -ARENA_HALF_HEIGHT - 0.45, ARENA_HALF_HEIGHT + 0.45);
       groundGrass[index % groundGrass.length].push({
@@ -841,6 +853,7 @@ export class Game {
     this.camera.top = viewHeight / 2;
     this.camera.bottom = -viewHeight / 2;
     this.camera.updateProjectionMatrix();
+    this.radar.resize();
   };
 
   private readonly loop = (time: number): void => {
@@ -852,6 +865,7 @@ export class Game {
     this.updateCamera(delta);
     this.updateForestParallax(delta);
     this.render();
+    this.radar.update(delta, this.phase === 'running', this.player?.position, this.enemies);
 
     this.hudTimer += delta;
     if (this.hudTimer >= 0.1) {
@@ -1175,6 +1189,7 @@ export class Game {
             bullet.critical,
             bullet.headshot,
           );
+          if (bullet.headshot) this.audio.headshot(this.screenPan(bullet.position.x));
           this.createHitParticles(
             bullet.position.x,
             bullet.position.y,
@@ -1478,13 +1493,21 @@ export class Game {
   }
 
   private updateCamera(delta: number): void {
-    if (this.shake <= 0) {
-      this.camera.position.x = THREE.MathUtils.damp(this.camera.position.x, 0, 12, delta);
-      this.camera.position.y = THREE.MathUtils.damp(this.camera.position.y, 0, 12, delta);
-      return;
+    const player = this.player;
+    const maxX = Math.max(0, ARENA_HALF_WIDTH - this.viewport.x / 2);
+    const maxY = Math.max(0, ARENA_HALF_HEIGHT - this.viewport.y / 2);
+    const targetX = player ? THREE.MathUtils.clamp(player.position.x, -maxX, maxX) : 0;
+    const targetY = player ? THREE.MathUtils.clamp(player.position.y, -maxY, maxY) : 0;
+
+    this.cameraFocus.x = THREE.MathUtils.damp(this.cameraFocus.x, targetX, 12, delta);
+    this.cameraFocus.y = THREE.MathUtils.damp(this.cameraFocus.y, targetY, 12, delta);
+    this.camera.position.x = this.cameraFocus.x;
+    this.camera.position.y = this.cameraFocus.y;
+
+    if (this.shake > 0) {
+      this.camera.position.x += THREE.MathUtils.randFloatSpread(this.shake);
+      this.camera.position.y += THREE.MathUtils.randFloatSpread(this.shake);
     }
-    this.camera.position.x = THREE.MathUtils.randFloatSpread(this.shake);
-    this.camera.position.y = THREE.MathUtils.randFloatSpread(this.shake);
     this.camera.updateMatrixWorld();
   }
 
@@ -1510,6 +1533,7 @@ export class Game {
   }
 
   private clearRunObjects(): void {
+    this.radar.reset();
     while (this.enemies.length > 0) this.enemyPool.release(this.enemies.pop()!);
     while (this.bullets.length > 0) this.bulletPool.release(this.bullets.pop()!);
     while (this.pickups.length > 0) this.pickupPool.release(this.pickups.pop()!);

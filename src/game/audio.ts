@@ -1,7 +1,7 @@
 /**
  * 音效引擎。
  *
- * 枪声、吼叫、死亡、受击用 public/audio 下的采样播放；界面点击仍用 Web Audio 合成。
+ * 枪声、吼叫、死亡、受击、爆头用 public/audio 下的采样播放；界面点击仍用 Web Audio 合成。
  * 浏览器自动播放策略要求 AudioContext 必须在用户手势里创建 / 恢复，
  * 所以 unlock() 要绑在首次点击或按键上；在那之前所有播放接口都是安全的空操作。
  */
@@ -21,16 +21,18 @@ type SampleId =
   | 'zombieDeath'
   | 'bruteDeath'
   | 'playerDeath'
-  | 'hit';
+  | 'hit'
+  | 'headshot';
 
 const SAMPLE_URLS: Record<SampleId, string> = {
-  shoot: '/audio/gunshot.mp3',
-  growl: '/audio/zombie.mp3',
-  vomit: '/audio/zombie2.mp3',
-  zombieDeath: '/audio/zombie_dead.mp3',
-  bruteDeath: '/audio/boss_zombie_dead.mp3',
-  playerDeath: '/audio/male-death-scream.mp3',
-  hit: '/audio/beat.mp3',
+  shoot: './audio/gunshot.mp3',
+  growl: './audio/zombie.mp3',
+  vomit: './audio/zombie2.mp3',
+  zombieDeath: './audio/zombie_dead.mp3',
+  bruteDeath: './audio/boss_zombie_dead.mp3',
+  playerDeath: './audio/male-death-scream.mp3',
+  hit: './audio/beat.mp3',
+  headshot: './audio/cf-headshot.mp3',
 };
 
 const GROWL_IDS: readonly SampleId[] = ['growl', 'vomit'];
@@ -323,6 +325,11 @@ export class SoundEngine {
       0.48 * (0.3 + 0.7 * clamp(intensity, 0, 1)),
       rand(0.92, 1.08),
     );
+  }
+
+  /** 爆头命中，和飘字同步。短间隔防止穿透连爆糊成一片。 */
+  headshot(pan = 0): void {
+    this.playSample('headshot', 'headshot', 0.08, pan + rand(-0.08, 0.08), 0.1, 0.7, rand(0.98, 1.02));
   }
 
   /** 僵尸死亡。weight 达到大块头阈值时改播超级死亡采样。 */

@@ -13,6 +13,7 @@ import type {
 import { formatStat, rarityLabel } from './game/upgrades.js';
 
 const canvas = getElement<HTMLCanvasElement>('game-canvas');
+const radarCanvas = getElement<HTMLCanvasElement>('radar-canvas');
 const hud = getElement<HTMLElement>('hud');
 const damageLayer = getElement<HTMLElement>('damage-layer');
 const startScreen = getElement<HTMLElement>('start-screen');
@@ -286,6 +287,7 @@ async function bootstrap(): Promise<void> {
     const assets = await loadGameAssets();
     game = new Game(
       canvas,
+      radarCanvas,
       assets,
       {
         onHud: renderHud,
