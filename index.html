@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10140f" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <title>尸潮余烬</title>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game-canvas" aria-label="游戏画面"></canvas>
+      <div class="screen-shade" aria-hidden="true"></div>
+      <div id="damage-layer" class="damage-layer" aria-hidden="true"></div>
+
+      <section id="hud" class="hud" aria-label="战斗状态">
+        <div class="hud-level">
+          <span class="hud-kicker">等级</span>
+          <strong id="level-value">1</strong>
+        </div>
+        <div class="hud-bars">
+          <div class="bar-row">
+            <span class="bar-icon bar-icon-health"></span>
+            <div class="bar">
+              <span id="health-fill" class="bar-fill health-fill"></span>
+              <span id="health-text" class="bar-text">100 / 100</span>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-icon bar-icon-xp"></span>
+            <div class="bar bar-small">
+              <span id="xp-fill" class="bar-fill xp-fill"></span>
+              <span id="xp-text" class="bar-text">0 / 15</span>
+            </div>
+          </div>
+        </div>
+        <div class="hud-stats">
+          <span class="hud-regen"><i data-lucide="droplet"></i><b id="regen-value">0.80/秒</b></span>
+          <span><i data-lucide="timer"></i><b id="time-value">00:00</b></span>
+          <span><i data-lucide="skull"></i><b id="kill-value">0</b></span>
+          <span><i data-lucide="activity"></i><b id="wave-value">1</b></span>
+        </div>
+        <button id="pause-button" class="icon-button" type="button" aria-label="暂停">
+          <i data-lucide="pause"></i>
+        </button>
+      </section>
+
+      <section id="start-screen" class="overlay start-overlay">
+        <div class="start-copy">
+          <span class="eyebrow">ROGUELIKE SURVIVAL</span>
+          <h1>尸潮余烬</h1>
+          <p>活下去，回收遗骸，让每一张卡都把你推得更远。</p>
+          <button id="start-button" class="primary-button" type="button">
+            <i data-lucide="play"></i>
+            开始战斗
+          </button>
+        </div>
+      </section>
+
+      <section
+        id="upgrade-screen"
+        class="overlay upgrade-overlay hidden"
+        data-rarity="common"
+        aria-labelledby="upgrade-title"
+      >
+        <div class="upgrade-atmosphere" aria-hidden="true">
+          <div class="upgrade-fog upgrade-fog-back"></div>
+          <div class="upgrade-ruin upgrade-ruin-left"></div>
+          <div class="upgrade-ruin upgrade-ruin-right"></div>
+          <div class="upgrade-floor-glow"></div>
+          <div id="upgrade-ash" class="upgrade-ash"></div>
+          <div class="upgrade-fog upgrade-fog-front"></div>
+        </div>
+        <div class="upgrade-panel">
+          <div class="upgrade-heading">
+            <div>
+              <span class="eyebrow">FIELD MUTATION // LEVEL <b id="upgrade-level-value">01</b></span>
+              <h2 id="upgrade-title">强化协议</h2>
+            </div>
+            <span id="upgrade-signal" class="upgrade-signal">战地改装数据已接入</span>
+          </div>
+          <div id="upgrade-grid" class="upgrade-grid"></div>
+        </div>
+      </section>
+
+      <section id="pause-screen" class="overlay pause-overlay hidden">
+        <div class="pause-panel">
+          <span class="eyebrow">PAUSED</span>
+          <h2>战斗暂停</h2>
+          <button
+            id="sound-toggle"
+            class="sound-toggle"
+            type="button"
+            role="switch"
+            aria-checked="true"
+            data-enabled="true"
+          >
+            <i data-lucide="volume-2" aria-hidden="true"></i>
+            <span class="sound-toggle-copy">
+              <strong>音效</strong>
+              <em>枪声、尸吼与死亡</em>
+            </span>
+            <span id="sound-toggle-state" class="sound-toggle-state" aria-hidden="true">开启</span>
+            <span class="sound-toggle-track" aria-hidden="true"><i></i></span>
+          </button>
+          <button id="resume-button" class="primary-button" type="button">
+            <i data-lucide="play"></i>
+            继续
+          </button>
+        </div>
+      </section>
+
+      <section id="gameover-screen" class="overlay gameover-overlay hidden">
+        <div class="gameover-panel">
+          <span class="eyebrow">RUN ENDED</span>
+          <h2>你被尸潮吞没了</h2>
+          <div class="result-grid">
+            <div><span>存活时间</span><strong id="result-time">00:00</strong></div>
+            <div><span>击杀数量</span><strong id="result-kills">0</strong></div>
+            <div><span>最终等级</span><strong id="result-level">1</strong></div>
+          </div>
+          <button id="restart-button" class="primary-button" type="button">
+            <i data-lucide="rotate-ccw"></i>
+            再来一局
+          </button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
